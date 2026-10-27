@@ -7,7 +7,7 @@ import { createApiHandlers } from "./handlers";
 // The database client is opened once per process and kept on globalThis: hot reloading in
 // development re-runs this module and would otherwise open a new client on every edit.
 // The service is cheap and is rebuilt from the current code after a reload. Keeping it on
-// globalThis as well served stale methods once the service changed (AI log, defect 7).
+// globalThis as well served stale methods once the service changed (AI log, defect 8).
 const globalWithDatabase = globalThis as typeof globalThis & { trackingDatabase?: Database };
 
 let service: TrackingService | undefined;
