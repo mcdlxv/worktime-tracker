@@ -38,6 +38,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       body?.error?.message ?? "Сервер ответил ошибкой. Попробуйте ещё раз.",
     );
   }
+  if (body === null) {
+    // A success that is not JSON comes from something in between, such as the sign-in
+    // page of a proxy; passing it on as data would crash the page that reads it.
+    throw new ApiError(
+      response.status,
+      "BAD_RESPONSE",
+      "Сервер ответил не так, как ожидалось. Обновите страницу.",
+    );
+  }
   return body as T;
 }
 

@@ -95,3 +95,18 @@ describe("describeError", () => {
     );
   });
 });
+
+describe("apiClient and odd answers", () => {
+  it("rejects a successful answer that is not JSON, as a sign-in page of a proxy would be", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("<html>Вход в сеть</html>", { status: 200 })),
+    );
+
+    await expect(apiClient.listEmployees()).rejects.toMatchObject({
+      status: 200,
+      code: "BAD_RESPONSE",
+      message: "Сервер ответил не так, как ожидалось. Обновите страницу.",
+    });
+  });
+});
