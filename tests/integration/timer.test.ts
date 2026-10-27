@@ -109,3 +109,19 @@ describe("timer: start and stop", () => {
     ]);
   });
 });
+
+describe("task descriptions that say nothing", () => {
+  const ctx = useTrackingService();
+
+  it.each([
+    ["only invisible characters", { description: "\u200b\u200b" }],
+    ["not a string", { description: 42 }],
+  ])("are rejected: %s", async (_, input) => {
+    const { id } = await ctx.service.addEmployee({ name: "Алия Тестова" });
+
+    await expect(ctx.service.startTimer(id, input as never)).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+      message: "Опишите задачу",
+    });
+  });
+});

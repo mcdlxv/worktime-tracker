@@ -46,3 +46,19 @@ describe("employees", () => {
     });
   });
 });
+
+describe("employee input that is not a usable name", () => {
+  const ctx = useTrackingService();
+
+  it.each([
+    ["only an invisible character", { name: "\u200b" }, "Имя должно содержать буквы или цифры"],
+    ["only punctuation", { name: "..." }, "Имя должно содержать буквы или цифры"],
+    ["not a string", { name: 5 }, "Введите имя сотрудника"],
+    ["not an object", null, "Неверный формат запроса"],
+  ])("rejects %s with a message in Russian", async (_, input, message) => {
+    await expect(ctx.service.addEmployee(input as never)).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+      message,
+    });
+  });
+});

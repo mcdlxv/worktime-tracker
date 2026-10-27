@@ -1,17 +1,34 @@
 import { z } from "zod";
 import { ValidationError } from "./errors";
 
-export const employeeInputSchema = z.object({
-  name: z.string().trim().min(1, "Введите имя сотрудника").max(100, "Имя не длиннее 100 символов"),
-});
+/** At least one letter or digit: trim() leaves invisible characters such as U+200B in place. */
+const HAS_LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 
-export const startTimerInputSchema = z.object({
-  description: z
-    .string()
-    .trim()
-    .min(1, "Опишите задачу")
-    .max(200, "Описание не длиннее 200 символов"),
-});
+const NOT_AN_OBJECT = { error: "Неверный формат запроса" };
+
+export const employeeInputSchema = z.object(
+  {
+    name: z
+      .string({ error: "Введите имя сотрудника" })
+      .trim()
+      .min(1, "Введите имя сотрудника")
+      .max(100, "Имя не длиннее 100 символов")
+      .regex(HAS_LETTER_OR_DIGIT, "Имя должно содержать буквы или цифры"),
+  },
+  NOT_AN_OBJECT,
+);
+
+export const startTimerInputSchema = z.object(
+  {
+    description: z
+      .string({ error: "Опишите задачу" })
+      .trim()
+      .min(1, "Опишите задачу")
+      .max(200, "Описание не длиннее 200 символов")
+      .regex(HAS_LETTER_OR_DIGIT, "Опишите задачу"),
+  },
+  NOT_AN_OBJECT,
+);
 
 export const periodSchema = z
   .object({ from: z.number(), to: z.number() })
