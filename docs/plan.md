@@ -483,6 +483,24 @@ export interface TrackingService {
 - [x] После проверки dev-база удалена, чтобы сид на этапе 4 начинал с чистой БД. Коммит `23cae87`.
 - **На заметку для README:** скрипты (`db:migrate`) читают `.env` через `loadEnvConfig` в режиме production, а `next dev` — в режиме development. Чтобы оба видели одни и те же переменные, Turso-настройки держим в `.env.local`: он загружается в обоих режимах.
 
+### Задача 3.4: защита изменяющих запросов от межсайтовых вызовов ✅
+
+Задачи не было в плане. Её добавили после автоматического ревью безопасности и решения человека (подробности в `docs/ai-log.md`, ошибка № 5).
+
+**Файлы:** `src/server/http/errors.ts`, `src/server/http/handlers.ts`, `src/server/http/respond.ts`, `src/app/api/employees/[id]/timer/stop/route.ts`, `tests/api/request-guard.test.ts`.
+
+- [x] Тесты (сначала красные; межсайтовый запрос и `text/plain` получали 201):
+  | #   | Запрос                                                      | Ожидание                               |
+  | --- | ----------------------------------------------------------- | -------------------------------------- |
+  | C1  | POST employees с `Sec-Fetch-Site: cross-site` / `same-site` | 403 `CROSS_SITE_REQUEST`, БД пуста     |
+  | C2  | `Sec-Fetch-Site: same-origin` / без заголовка (curl)        | 201                                    |
+  | C3  | POST employees с `Content-Type: text/plain`                 | 415 `UNSUPPORTED_MEDIA_TYPE`, БД пуста |
+  | C4  | `Content-Type: application/json; charset=utf-8`             | 201                                    |
+  | C5  | старт и стоп с `cross-site`, стоп без `Content-Type`        | 403, 403, 415; таймер не тронут        |
+- [x] `HttpError(status, code, message)` для ошибок самого HTTP-запроса, чтобы доменный слой не знал про HTTP. `stopTimer` теперь принимает запрос, чтобы читать заголовки. Коммит `cecaf55`.
+- **Для этапа 4:** клиент API отправляет `Content-Type: application/json` в **каждом** изменяющем запросе, включая стоп без тела.
+- **Вне объёма по ТЗ:** вход, роли, права на уровне сотрудника. В README они пойдут в раздел «Безопасность» как то, что нужно для продакшена.
+
 ---
 
 ## Этап 4 — Интерфейс
