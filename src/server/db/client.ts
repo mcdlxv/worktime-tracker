@@ -2,8 +2,9 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
-
-export const DEFAULT_DATABASE_URL = "file:./data/worktime.db";
+import { migrate } from "drizzle-orm/libsql/migrator";
+import { DEFAULT_DATABASE_URL } from "./config";
+import * as schema from "./schema";
 
 /**
  * Opens a libSQL database: a local SQLite file (`file:` URL) or a remote Turso
@@ -17,5 +18,12 @@ export function openDatabase(url: string = DEFAULT_DATABASE_URL, authToken?: str
   }
 
   const client = createClient({ url, authToken });
-  return { client, db: drizzle(client) };
+  return { client, db: drizzle(client, { schema }) };
+}
+
+export type Database = ReturnType<typeof openDatabase>["db"];
+
+/** Applies the SQL migrations from ./drizzle that the database has not seen yet. */
+export async function migrateDatabase(db: Database) {
+  await migrate(db, { migrationsFolder: "drizzle" });
 }
