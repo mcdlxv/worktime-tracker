@@ -5,6 +5,14 @@ export const employeeInputSchema = z.object({
   name: z.string().trim().min(1, "Введите имя сотрудника").max(100, "Имя не длиннее 100 символов"),
 });
 
+export const startTimerInputSchema = z.object({
+  description: z
+    .string()
+    .trim()
+    .min(1, "Опишите задачу")
+    .max(200, "Описание не длиннее 200 символов"),
+});
+
 /** Validates input against a schema; the first problem becomes a ValidationError. */
 export function parseInput<T extends z.ZodType>(schema: T, input: unknown): z.output<T> {
   const result = schema.safeParse(input);

@@ -27,4 +27,7 @@ export interface TrackingService {
   addEmployee(input: { name: string }): Promise<Employee>;
   /** Sorted by name using Russian collation. */
   listEmployees(): Promise<EmployeeWithTimer[]>;
+  startTimer(employeeId: number, input: { description: string }): Promise<TimeEntry>;
+  /** Closes the running entry at the current time and returns it. */
+  stopTimer(employeeId: number): Promise<TimeEntry>;
 }
