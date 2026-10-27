@@ -69,7 +69,12 @@ describe("timer: starting again", () => {
 
     await insertRunningEntry("Первая");
 
-    await expect(insertRunningEntry("Вторая")).rejects.toThrow();
+    await expect(insertRunningEntry("Вторая")).rejects.toMatchObject({
+      // Drizzle wraps the driver's error; this is the text the service recognises.
+      cause: {
+        message: expect.stringContaining("UNIQUE constraint failed: time_entries.employee_id"),
+      },
+    });
     expect(await runningEntries()).toHaveLength(1);
   });
 });
