@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run db:migrate && TZ=Europe/Moscow npm run db:seed && npm run build",
-  "regions": ["dub1"]
+  "regions": ["dub1"],
+  "crons": [{ "path": "/api/cron/reset-demo", "schedule": "0 0 * * *" }]
 }

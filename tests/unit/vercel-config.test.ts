@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { DEMO_TIME_ZONE } from "@/server/db/seed";
 
 const readVercelConfig = () => JSON.parse(readFileSync("vercel.json", "utf8"));
 
@@ -21,5 +22,16 @@ describe("Vercel configuration", () => {
 
   it("runs the functions next to the database: Dublin, as Turso's aws-eu-west-1", () => {
     expect(readVercelConfig().regions).toEqual(["dub1"]);
+  });
+
+  it("resets the demo data once a day, at night in Moscow", () => {
+    // 00:00 UTC is 03:00 in Moscow; on the Hobby plan Vercel runs it within that hour.
+    expect(readVercelConfig().crons).toEqual([
+      { path: "/api/cron/reset-demo", schedule: "0 0 * * *" },
+    ]);
+  });
+
+  it("seeds during the build in the same time zone as the daily reset", () => {
+    expect(readVercelConfig().buildCommand).toContain(`TZ=${DEMO_TIME_ZONE} npm run db:seed`);
   });
 });
