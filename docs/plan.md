@@ -44,6 +44,7 @@
 | Файл                                                                | Ответственность                                                                                                     |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `src/server/db/client.ts`                                           | `openDatabase(url, authToken?)`: создаёт папку под файл БД, клиент libSQL и Drizzle. Отдельно `migrateDatabase(db)` |
+| `src/server/db/config.ts`                                           | `databaseConfig()`: откуда брать БД — `DATABASE_URL` и `DATABASE_AUTH_TOKEN` или локальный файл по умолчанию        |
 | `src/server/db/schema.ts`                                           | таблицы `employees`, `time_entries`, индексы, CHECK                                                                 |
 | `drizzle/`                                                          | сгенерированные SQL-миграции (коммитим)                                                                             |
 | `src/server/tracking/types.ts`                                      | доменные типы и DTO                                                                                                 |
@@ -241,13 +242,19 @@ export interface TrackingService {
 
 ---
 
-## Этап 1 — Данные и таймер (TDD)
+## Этап 1 — Данные и таймер (TDD) ✅
 
-### Задача 1.1: схема и миграции
+Итог: 21 тест в 6 файлах. Коммиты `a0d1bb7`, `e0a4dbf`, `cdfab08`, `c34c8cb`, `2f52f5c`.
 
-**Файлы:** `src/server/db/schema.ts`, `drizzle.config.ts`, `scripts/migrate.ts`, изменить `src/server/db/client.ts`, `package.json`.
+### Задача 1.1: схема и миграции ✅
 
-- [ ] Схема:
+**Файлы:**
+
+- созданы: `src/server/db/schema.ts`, `src/server/db/config.ts`, `drizzle.config.ts`, `drizzle/0000_init.sql`, `scripts/migrate.ts`, `.env.example`;
+- изменены: `src/server/db/client.ts`, `package.json`;
+- тест: `tests/integration/schema.test.ts`.
+
+- [x] Схема:
   - `employees(id, name, created_at)`;
   - `time_entries(id, employee_id → employees.id, description, started_at, ended_at NULL)`;
   - ``uniqueIndex("one_running_timer_per_employee").on(employeeId).where(sql`ended_at IS NULL`)``;
@@ -256,58 +263,45 @@ export interface TrackingService {
 
   В `sql`-фрагментах индекса и CHECK пишем голые имена колонок: в частичном индексе SQLite допускает только колонки индексируемой таблицы.
 
-- [ ] `drizzle.config.ts`:
-  - `dialect: "turso"`, `schema: "./src/server/db/schema.ts"`, `out: "./drizzle"`;
-  - `dbCredentials: { url: process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL, authToken: process.env.DATABASE_AUTH_TOKEN }`;
-  - переменные окружения загружаем через `loadEnvConfig` из `@next/env` — та же логика `.env`-файлов, что у Next.
-- [ ] `client.ts`: `drizzle(client, { schema })`. Добавить `migrateDatabase(db)`: `migrate(db, { migrationsFolder: "drizzle" })` из `drizzle-orm/libsql/migrator`.
-- [ ] Скрипты:
-  - `db:generate: "drizzle-kit generate"`;
-  - `db:migrate: "tsx scripts/migrate.ts"`;
-  - `dev: "npm run db:migrate && next dev"`;
-  - `start: "npm run db:migrate && next start"`.
-- [ ] `npm run db:generate` → прочитать сгенерированный SQL глазами: частичный индекс должен содержать `WHERE ended_at IS NULL`.
-- [ ] Коммит `feat(db): add schema with one-running-timer partial index`.
+- [x] `databaseConfig()` в `src/server/db/config.ts` — единственное место, где читаются `DATABASE_URL` и `DATABASE_AUTH_TOKEN`. Пустые значения заменяются значениями по умолчанию. Функция используется в `drizzle.config.ts`, в `scripts/migrate.ts`, а позже — в контейнере сервиса.
+- [x] `drizzle.config.ts`: `dialect: "turso"`, `out: "./drizzle"`, `dbCredentials: databaseConfig()`. Файлы `.env` читаются через `loadEnvConfig` из `@next/env`; пакет зафиксирован в devDependencies той же версии, что и `next`.
+- [x] `client.ts`: `drizzle(client, { schema })`, тип `Database` и функция `migrateDatabase(db)`.
+- [x] Скрипты `db:generate` и `db:migrate`; `dev` и `start` теперь сначала применяют миграции. Проверено в браузере: `npm run dev` выводит `Database is up to date`, страница отдаёт 200.
+- [x] Сгенерированный SQL прочитан: `CREATE UNIQUE INDEX one_running_timer_per_employee ON time_entries (employee_id) WHERE ended_at IS NULL`.
+- [x] Тесты схемы, сначала красные:
+  | #   | Тест                      | Ожидание                                                             |
+  | --- | ------------------------- | -------------------------------------------------------------------- |
+  | M1  | миграции на пустой БД     | обе таблицы и частичный уникальный индекс с `WHERE ended_at IS NULL` |
+  | M2  | повторный запуск миграций | проходит без ошибок: `npm run dev` выполняет их при каждом старте    |
+- [x] Коммит `a0d1bb7`.
 
-### Задача 1.2: доменные типы, ошибки, валидация
+### Задача 1.2: доменные типы, ошибки, валидация ✅
 
-**Файлы:** `src/server/tracking/types.ts`, `errors.ts`, `validation.ts`.
+- [x] Типы, ошибки и zod-схемы росли вместе с тестами: каждая задача добавляла ровно то, что требовал её красный тест.
+- [x] Схемы периода (`periodSchema`, `reportQuerySchema`) перенесены в этап 2, где появляется отчёт.
 
-- [ ] Типы — как в разделе «Контракты».
-- [ ] Ошибки: `DomainError(code, message)` и наследники `ValidationError`, `NotFoundError`, `ConflictError`.
-- [ ] zod-схемы:
-  - `employeeInputSchema`: `name` — `trim`, длина 1–100;
-  - `startTimerInputSchema`: `description` — `trim`, длина 1–200;
-  - `periodSchema`: `from`, `to` — конечные числа, `from < to`;
-  - `reportQuerySchema`: строки из URL → `Period` (`z.iso.datetime({ offset: true })` → `Date.parse`) + необязательный `employeeId`, положительное целое.
+### Задача 1.3: тестовый контекст ✅
 
-### Задача 1.3: тестовый контекст
+- [x] `useTrackingService()` → `{ service, db, client, clock, dbUrl }`: свежий файл БД с миграциями и сервис на фальшивых часах для каждого теста.
+- [x] `createFakeClock()` с методами `set(ms)` и `advance(ms)`, старт `T0 = Date.UTC(2026, 9, 1, 9, 0, 0)`; константы `MINUTE` и `HOUR`.
+- [x] БД в тестах — временный файл, а не `:memory:`: так ближе к реальной работе, и тот же файл нужен тесту перезапуска.
 
-**Файлы:** `tests/helpers/test-context.ts`.
+### Задача 1.4: сотрудники ✅
 
-- [ ] `createTestContext()` → `{ service, db, client, clock, close }`:
-  - БД — временный файл: у in-memory-подключений libSQL возможны сюрпризы с отдельными соединениями, файл надёжнее и ближе к реальности;
-  - перед каждым тестом выполняются миграции;
-  - `clock` — фальшивые часы: `now()`, `set(ms)`, `advance(ms)`, старт `T0 = Date.UTC(2026, 9, 1, 9, 0, 0)`.
+- [x] Тесты, сначала красные:
+  | #   | Тест                                                  | Ожидание                                                                                                                 |
+  | --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+  | E1  | `addEmployee({ name: "  Алия Тестова  " })`           | `{ id, name: "Алия Тестова", createdAt: T0 }`                                                                            |
+  | E2  | «Вера», «Ёлкина», «Алия», «Борис» → `listEmployees()` | «Алия», «Борис», «Вера», «Ёлкина», у всех `runningEntry: null`. При сортировке по кодам символов «Ё» оказалась бы первой |
+  | E3  | имя из пробелов                                       | `VALIDATION_ERROR` «Введите имя сотрудника», в БД пусто                                                                  |
+  | E4  | имя из 100 символов / из 101 символа                  | принято / `VALIDATION_ERROR` «Имя не длиннее 100 символов»                                                               |
+- [x] Коммит `e0a4dbf`.
 
-### Задача 1.4: сотрудники (TDD)
-
-**Файлы:** `tests/integration/employees.test.ts`, `src/server/tracking/service.ts`.
-
-- [ ] Тесты (сначала красные):
-  | #   | Тест                                                 | Ожидание                                                     |
-  | --- | ---------------------------------------------------- | ------------------------------------------------------------ |
-  | E1  | `addEmployee({ name: "  Алия Тестова  " })`          | `{ id: число, name: "Алия Тестова", createdAt: T0 }`         |
-  | E2  | добавить «Вера», «Алия», «Борис» → `listEmployees()` | порядок «Алия», «Борис», «Вера», у всех `runningEntry: null` |
-  | E3  | `addEmployee({ name: "   " })`                       | `ValidationError`, в БД 0 сотрудников                        |
-  | E4  | имя из 101 символа                                   | `ValidationError`                                            |
-- [ ] Реализация → зелёный → коммит `feat(tracking): add and list employees`.
-
-### Задача 1.5: старт и стоп (TDD)
+### Задача 1.5: старт и стоп ✅
 
 **Файлы:** `tests/integration/timer.test.ts`, `service.ts`.
 
-- [ ] Тесты:
+- [x] Тесты:
   | #   | Тест                                                    | Ожидание                                                                                                                       |
   | --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
   | T3  | `startTimer(id, { description: " Сверка накладных " })` | запись `{ description: "Сверка накладных", startedAt: T0, endedAt: null }`; `listEmployees()` показывает её как `runningEntry` |
@@ -317,31 +311,36 @@ export interface TrackingService {
   | T7  | `stopTimer(id)` без запущенного таймера                 | `ConflictError` (`TIMER_NOT_RUNNING`)                                                                                          |
   | T7b | `stopTimer(999)`                                        | `NotFoundError`                                                                                                                |
   | T7c | у двух сотрудников таймеры идут одновременно            | оба запуска успешны — ограничение действует на сотрудника, а не глобально                                                      |
-- [ ] Реализация → зелёный → коммит `feat(tracking): start and stop timer`.
+- [x] `stopTimer` — это один запрос `UPDATE … WHERE ended_at IS NULL RETURNING`. Коммит `cdfab08`.
 
-### Задача 1.6: повторный запуск таймера (TDD)
+### Задача 1.6: повторный запуск таймера ✅
 
 **Файлы:** `tests/integration/timer-restart.test.ts`, `service.ts`.
 
-- [ ] Тесты:
+- [x] Тесты:
   | #    | Тест                                                                           | Ожидание                                                                                                         |
   | ---- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
   | T8   | старт «А», `advance(5 мин)`, старт «Б»                                         | `ConflictError` (`TIMER_ALREADY_RUNNING`). Идущая запись та же: id, «А», `startedAt: T0`; идущих записей ровно 1 |
   | T9   | старт → стоп → `advance(10 мин)` → старт                                       | две записи: первая закрыта, вторая идёт, `startedAt` второй = T0 + 25 + 10 мин                                   |
   | T10  | `Promise.allSettled([start("А"), start("Б")])`                                 | ровно один `fulfilled`, один `rejected` с `ConflictError`; в БД 1 идущая запись                                  |
   | T10b | обойти сервис: два прямых `INSERT` идущих записей одного сотрудника через `db` | второй падает: инвариант держит БД, а не только код                                                              |
-- [ ] Реализация (INSERT + перевод нарушения индекса в `ConflictError`) → зелёный → коммит `feat(tracking): reject repeated timer start via unique index`.
+- [x] Красными были T8 и T10. T9 и T10b сторожат схему, поэтому прошли сразу.
+- [x] Конфликт распознаётся по сообщению `UNIQUE constraint failed: time_entries.employee_id`, которое ищется по цепочке `cause`. Почему так:
+  - SQLite называет в сообщении колонку, а не индекс;
+  - Drizzle оборачивает ошибку драйвера в `DrizzleQueryError`.
+- [x] Коммит `c34c8cb`.
+- **На заметку для этапа 3:** в сообщении `DrizzleQueryError` есть параметры запроса, то есть пользовательские данные. Наружу такую ошибку отдавать нельзя, только общий ответ 500 (задача 3.1).
 
-### Задача 1.7: сохранение после перезапуска (TDD)
+### Задача 1.7: сохранение после перезапуска ✅
 
 **Файлы:** `tests/integration/persistence.test.ts`.
 
-- [ ] Тест T18:
+- [x] Тест T18:
   1. Сервис A на файле `<tmp>/app.db`: сотрудник, одна закрытая запись (30 мин), одна идущая.
   2. `client.close()`.
   3. Новый клиент и сервис B на том же файле, часы `+2 ч`.
   4. Проверяем: сотрудник на месте, `runningEntry` с тем же `startedAt`; `stopTimer` даёт `endedAt` по новым часам.
-- [ ] Тест должен пройти без нового кода — значит, сохранение заложено в модель данных. Коммит `test(tracking): data and running timer survive restart`.
+- [x] Тест прошёл без нового кода, как и ожидалось: сохранение заложено в модель данных. Он сторожит от регрессии, при которой таймеры начнут хранить в памяти процесса. Коммит `2f52f5c`.
 
 ---
 
