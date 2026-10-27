@@ -1,5 +1,9 @@
 export type ErrorCode =
-  "VALIDATION_ERROR" | "EMPLOYEE_NOT_FOUND" | "TIMER_ALREADY_RUNNING" | "TIMER_NOT_RUNNING";
+  | "VALIDATION_ERROR"
+  | "INVALID_JSON"
+  | "EMPLOYEE_NOT_FOUND"
+  | "TIMER_ALREADY_RUNNING"
+  | "TIMER_NOT_RUNNING";
 
 /** An expected failure with a stable code that the HTTP layer maps to a status. */
 export class DomainError extends Error {
@@ -13,8 +17,8 @@ export class DomainError extends Error {
 }
 
 export class ValidationError extends DomainError {
-  constructor(message: string) {
-    super("VALIDATION_ERROR", message);
+  constructor(message: string, code: "VALIDATION_ERROR" | "INVALID_JSON" = "VALIDATION_ERROR") {
+    super(code, message);
   }
 }
 

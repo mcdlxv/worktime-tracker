@@ -3,6 +3,7 @@ import { DomainError, type ErrorCode } from "@/server/tracking/errors";
 // A Record, so a new error code without a status does not compile.
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
+  INVALID_JSON: 400,
   EMPLOYEE_NOT_FOUND: 404,
   TIMER_ALREADY_RUNNING: 409,
   TIMER_NOT_RUNNING: 409,
