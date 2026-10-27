@@ -2,8 +2,12 @@ const MINUTE = 60_000;
 
 const twoDigits = (value: number) => String(value).padStart(2, "0");
 
-/** "1 ч 02 мин", or "25 мин" under an hour. Whole minutes, rounded down. */
+/**
+ * "1 ч 02 мин", "25 мин" under an hour, "< 1 мин" under a minute. Whole minutes, rounded
+ * down; only an exact zero reads "0 мин", so a short entry does not look like no work at all.
+ */
 export function formatDuration(ms: number): string {
+  if (ms > 0 && ms < MINUTE) return "< 1 мин";
   const totalMinutes = Math.floor(ms / MINUTE);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;

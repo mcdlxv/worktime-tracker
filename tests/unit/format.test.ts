@@ -38,9 +38,12 @@ describe("formatDate and formatTime", () => {
 });
 
 describe("formatDuration", () => {
+  // Under a minute but not zero reads "< 1 мин": two short entries with a total of 1 minute
+  // would otherwise read as "0 мин" + "0 мин" = "1 мин".
   it.each([
     [0, "0 мин"],
-    [59_999, "0 мин"],
+    [1, "< 1 мин"],
+    [59_999, "< 1 мин"],
     [60_000, "1 мин"],
     [3_725_000, "1 ч 02 мин"],
     [7_200_000, "2 ч 00 мин"],
