@@ -47,30 +47,40 @@ describe("timer: start and stop", () => {
     });
   });
 
-  it("stops the running timer at the current time", async () => {
+  it("stops the running entry at the current time", async () => {
     const employee = await addEmployee();
-    await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
+    const entry = await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
     ctx.clock.advance(25 * MINUTE);
 
-    const stopped = await ctx.service.stopTimer(employee.id);
+    const stopped = await ctx.service.stopEntry(entry.id);
 
-    expect(stopped).toMatchObject({ startedAt: T0, endedAt: T0 + 25 * MINUTE });
+    expect(stopped).toEqual({ ...entry, endedAt: T0 + 25 * MINUTE });
     const [listed] = await ctx.service.listEmployees();
     expect(listed.runningEntry).toBeNull();
   });
 
-  it("refuses to stop when no timer is running", async () => {
+  it("ignores a late repeat of a stop, which cannot stop the timer started after it", async () => {
+    // Found by hand: a stop sent while the server was down reached it after it came back.
     const employee = await addEmployee();
+    const first = await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
+    ctx.clock.advance(25 * MINUTE);
+    await ctx.service.stopEntry(first.id);
+    ctx.clock.advance(5 * MINUTE);
+    const second = await ctx.service.startTimer(employee.id, { description: "Звонок клиенту" });
 
-    await expect(ctx.service.stopTimer(employee.id)).rejects.toMatchObject({
+    await expect(ctx.service.stopEntry(first.id)).rejects.toMatchObject({
       code: "TIMER_NOT_RUNNING",
-      message: "Таймер не запущен",
+      message: "Таймер уже остановлен",
     });
+
+    const [listed] = await ctx.service.listEmployees();
+    expect(listed.runningEntry).toEqual(second);
   });
 
-  it("refuses to stop a timer for an unknown employee", async () => {
-    await expect(ctx.service.stopTimer(999)).rejects.toMatchObject({
-      code: "EMPLOYEE_NOT_FOUND",
+  it("refuses to stop an entry that does not exist", async () => {
+    await expect(ctx.service.stopEntry(999)).rejects.toMatchObject({
+      code: "ENTRY_NOT_FOUND",
+      message: "Запись не найдена",
     });
   });
 

@@ -38,7 +38,7 @@ export function createTrackingService({
       .from(employees)
       .where(eq(employees.id, employeeId))
       .limit(1);
-    if (!employee) throw new NotFoundError();
+    if (!employee) throw new NotFoundError("employee");
   }
 
   return {
@@ -84,17 +84,23 @@ export function createTrackingService({
       }
     },
 
-    async stopTimer(employeeId) {
-      await requireEmployee(employeeId);
-      // One statement finds and closes the running entry, so there is no gap between
-      // "is a timer running?" and "stop it" for another request to slip into.
-      const [entry] = await db
+    async stopEntry(entryId) {
+      // One statement closes the entry only while it still runs: no gap between "is it
+      // running?" and "stop it", and a late repeat of the request finds nothing to stop.
+      const [stopped] = await db
         .update(timeEntries)
         .set({ endedAt: clock() })
-        .where(and(eq(timeEntries.employeeId, employeeId), isNull(timeEntries.endedAt)))
+        .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.endedAt)))
         .returning();
-      if (!entry) throw new ConflictError("TIMER_NOT_RUNNING", "Таймер не запущен");
-      return entry;
+      if (stopped) return stopped;
+
+      const [existing] = await db
+        .select({ id: timeEntries.id })
+        .from(timeEntries)
+        .where(eq(timeEntries.id, entryId))
+        .limit(1);
+      if (!existing) throw new NotFoundError("entry");
+      throw new ConflictError("TIMER_NOT_RUNNING", "Таймер уже остановлен");
     },
 
     async getReport({ period, employeeId }) {

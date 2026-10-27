@@ -60,11 +60,11 @@ export async function seedDemoData(
       for (const [startHour, startMinute, endHour, endMinute] of WORKDAY_SLOTS) {
         // Each person starts and stops a few minutes apart, so the totals differ.
         clock = new Date(day).setHours(startHour, startMinute + index * 7);
-        await service.startTimer(employee.id, {
+        const entry = await service.startTimer(employee.id, {
           description: DEMO_TASKS[taskNumber++ % DEMO_TASKS.length],
         });
         clock = new Date(day).setHours(endHour, endMinute + index * 4);
-        await service.stopTimer(employee.id);
+        await service.stopEntry(entry.id);
       }
     }
   }

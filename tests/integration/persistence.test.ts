@@ -9,9 +9,9 @@ describe("data after a restart", () => {
 
   it("keeps employees, finished entries and a running timer", async () => {
     const employee = await ctx.service.addEmployee({ name: "Алия Тестова" });
-    await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
+    const finished = await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
     ctx.clock.advance(30 * MINUTE);
-    await ctx.service.stopTimer(employee.id);
+    await ctx.service.stopEntry(finished.id);
     ctx.clock.advance(5 * MINUTE);
     const running = await ctx.service.startTimer(employee.id, { description: "Звонок клиенту" });
 
@@ -33,7 +33,7 @@ describe("data after a restart", () => {
       });
       expect(await restarted.db.select().from(timeEntries)).toHaveLength(2);
 
-      const stopped = await service.stopTimer(employee.id);
+      const stopped = await service.stopEntry(running.id);
       expect(stopped.endedAt).toBe(running.startedAt + 2 * HOUR);
     } finally {
       restarted.client.close();

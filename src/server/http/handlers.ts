@@ -59,10 +59,10 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
-/** An id that is not a positive integer cannot name an employee: 404, as for an unknown one. */
-function parseEmployeeId(raw: string): number {
+/** A path id that is not a positive integer names nothing: 404, as for an unknown one. */
+function parseId(raw: string, what: "employee" | "entry"): number {
   const id = Number(raw);
-  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(id) || id === 0) throw new NotFoundError();
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(id) || id === 0) throw new NotFoundError(what);
   return id;
 }
 
@@ -103,15 +103,15 @@ export function createApiHandlers(getService: () => TrackingService) {
     startTimer: (request: Request, rawId: string) =>
       respond(async (service) => {
         assertSameSiteJson(request);
-        const employeeId = parseEmployeeId(rawId);
+        const employeeId = parseId(rawId, "employee");
         const input = (await readJson(request)) as { description: string };
         return Response.json(await service.startTimer(employeeId, input), { status: 201 });
       }),
 
-    stopTimer: (request: Request, rawId: string) =>
+    stopEntry: (request: Request, rawEntryId: string) =>
       respond(async (service) => {
         assertSameSiteJson(request);
-        return Response.json(await service.stopTimer(parseEmployeeId(rawId)));
+        return Response.json(await service.stopEntry(parseId(rawEntryId, "entry")));
       }),
 
     getReport: (request: Request) =>

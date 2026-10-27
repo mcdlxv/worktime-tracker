@@ -11,7 +11,8 @@ const read = async (response: Response) => ({
 describe("errorResponse", () => {
   it.each([
     ["a validation error", new ValidationError("Введите имя сотрудника"), 400],
-    ["an unknown employee", new NotFoundError(), 404],
+    ["an unknown employee", new NotFoundError("employee"), 404],
+    ["an unknown time entry", new NotFoundError("entry"), 404],
     [
       "a timer that already runs",
       new ConflictError("TIMER_ALREADY_RUNNING", "Таймер уже запущен"),

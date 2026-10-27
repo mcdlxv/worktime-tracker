@@ -2,6 +2,7 @@ export type ErrorCode =
   | "VALIDATION_ERROR"
   | "INVALID_JSON"
   | "EMPLOYEE_NOT_FOUND"
+  | "ENTRY_NOT_FOUND"
   | "TIMER_ALREADY_RUNNING"
   | "TIMER_NOT_RUNNING";
 
@@ -22,9 +23,14 @@ export class ValidationError extends DomainError {
   }
 }
 
+const NOT_FOUND = {
+  employee: { code: "EMPLOYEE_NOT_FOUND", message: "Сотрудник не найден" },
+  entry: { code: "ENTRY_NOT_FOUND", message: "Запись не найдена" },
+} as const;
+
 export class NotFoundError extends DomainError {
-  constructor() {
-    super("EMPLOYEE_NOT_FOUND", "Сотрудник не найден");
+  constructor(what: keyof typeof NOT_FOUND) {
+    super(NOT_FOUND[what].code, NOT_FOUND[what].message);
   }
 }
 

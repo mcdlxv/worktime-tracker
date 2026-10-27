@@ -21,19 +21,26 @@ afterEach(() => {
 
 describe("apiClient", () => {
   it.each([
-    ["adding an employee", () => apiClient.addEmployee("Алия Тестова"), { name: "Алия Тестова" }],
+    [
+      "adding an employee",
+      "/api/employees",
+      () => apiClient.addEmployee("Алия Тестова"),
+      { name: "Алия Тестова" },
+    ],
     [
       "starting a timer",
+      "/api/employees/7/timer/start",
       () => apiClient.startTimer(7, "Сверка накладных"),
       { description: "Сверка накладных" },
     ],
-    ["stopping a timer", () => apiClient.stopTimer(7), {}],
-  ])("sends %s as a JSON POST, as the API requires", async (_, call, body) => {
+    ["stopping a time entry", "/api/time-entries/42/stop", () => apiClient.stopEntry(42), {}],
+  ])("sends %s as a JSON POST to %s, as the API requires", async (_, path, call, body) => {
     const fetchStub = stubFetch(200, {});
 
     await call();
 
-    const { init } = onlyCall(fetchStub);
+    const { url, init } = onlyCall(fetchStub);
+    expect(url).toBe(path);
     expect(init?.method).toBe("POST");
     expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
     expect(JSON.parse(String(init?.body))).toEqual(body);

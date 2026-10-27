@@ -55,8 +55,11 @@ export interface TrackingService {
   /** Sorted by name using Russian collation. */
   listEmployees(): Promise<EmployeeWithTimer[]>;
   startTimer(employeeId: number, input: { description: string }): Promise<TimeEntry>;
-  /** Closes the running entry at the current time and returns it. */
-  stopTimer(employeeId: number): Promise<TimeEntry>;
+  /**
+   * Closes this entry at the current time, if it is still running. A stop names its entry
+   * rather than "whatever runs now", so a late or repeated request cannot stop a newer timer.
+   */
+  stopEntry(entryId: number): Promise<TimeEntry>;
   /** Totals for every employee (or just one) over the period; running timers count up to now. */
   getReport(input: { period: Period; employeeId?: number }): Promise<Report>;
 }

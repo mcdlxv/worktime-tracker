@@ -66,7 +66,7 @@ export function EmployeeRow({
             <Button
               variant="stop"
               disabled={busy}
-              onClick={() => void perform(() => apiClient.stopTimer(employee.id))}
+              onClick={() => void perform(() => apiClient.stopEntry(running.id))}
             >
               Остановить
             </Button>

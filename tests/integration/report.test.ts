@@ -15,10 +15,10 @@ describe("report for a period", () => {
   /** Tracks a task through the service; without `endedAt` the timer keeps running. */
   async function track(employeeId: number, task: string, startedAt: number, endedAt?: number) {
     ctx.clock.set(startedAt);
-    await ctx.service.startTimer(employeeId, { description: task });
+    const entry = await ctx.service.startTimer(employeeId, { description: task });
     if (endedAt !== undefined) {
       ctx.clock.set(endedAt);
-      await ctx.service.stopTimer(employeeId);
+      await ctx.service.stopEntry(entry.id);
     }
   }
 

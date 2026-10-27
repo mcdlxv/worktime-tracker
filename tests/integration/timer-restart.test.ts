@@ -24,9 +24,9 @@ describe("timer: starting again", () => {
 
   it("starts a fresh entry once the previous one was stopped", async () => {
     const employee = await addEmployee();
-    await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
+    const first = await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
     ctx.clock.advance(25 * MINUTE);
-    await ctx.service.stopTimer(employee.id);
+    await ctx.service.stopEntry(first.id);
     ctx.clock.advance(10 * MINUTE);
 
     await ctx.service.startTimer(employee.id, { description: "Звонок клиенту" });

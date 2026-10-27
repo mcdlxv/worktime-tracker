@@ -110,29 +110,37 @@ describe("HTTP handlers", () => {
     },
   );
 
-  it("POST /api/employees/:id/timer/stop: 409 while idle, 200 with endedAt after a start", async () => {
+  it("POST /api/time-entries/:id/stop: 200 with endedAt, then 409 when repeated", async () => {
     const id = await addEmployee();
-    const stop = () => api().stopTimer(post(`/api/employees/${id}/timer/stop`, {}), String(id));
-
-    expect(await read(await stop())).toEqual({
-      status: 409,
-      body: { error: { code: "TIMER_NOT_RUNNING", message: "Таймер не запущен" } },
-    });
-
-    await ctx.service.startTimer(id, { description: "Сверка накладных" });
+    const entry = await ctx.service.startTimer(id, { description: "Сверка накладных" });
     ctx.clock.advance(30 * MINUTE);
+    const stop = () =>
+      api().stopEntry(post(`/api/time-entries/${entry.id}/stop`, {}), String(entry.id));
 
     expect(await read(await stop())).toMatchObject({
       status: 200,
-      body: { startedAt: T0, endedAt: T0 + 30 * MINUTE },
+      body: { id: entry.id, startedAt: T0, endedAt: T0 + 30 * MINUTE },
+    });
+    expect(await read(await stop())).toEqual({
+      status: 409,
+      body: { error: { code: "TIMER_NOT_RUNNING", message: "Таймер уже остановлен" } },
+    });
+  });
+
+  it.each(["abc", "0", "999"])("POST /api/time-entries/%s/stop: 404", async (rawId) => {
+    const response = await api().stopEntry(post(`/api/time-entries/${rawId}/stop`, {}), rawId);
+
+    expect(await read(response)).toEqual({
+      status: 404,
+      body: { error: { code: "ENTRY_NOT_FOUND", message: "Запись не найдена" } },
     });
   });
 
   it("GET /api/report: 200 with totals, for one employee too, and zeros for an empty period", async () => {
     const id = await addEmployee();
-    await ctx.service.startTimer(id, { description: "Сверка накладных" });
+    const entry = await ctx.service.startTimer(id, { description: "Сверка накладных" });
     ctx.clock.advance(30 * MINUTE);
-    await ctx.service.stopTimer(id);
+    await ctx.service.stopEntry(entry.id);
 
     expect(await read(await api().getReport(reportRequest(FIRST_WEEK)))).toMatchObject({
       status: 200,

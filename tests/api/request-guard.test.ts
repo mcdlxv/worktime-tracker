@@ -85,11 +85,11 @@ describe("protection of state-changing requests", () => {
         post(`/api/employees/${id}/timer/start`, headers, { description: "Чужая задача" }),
         String(id),
       );
-    const stop = (headers: Record<string, string>) =>
-      api().stopTimer(post(`/api/employees/${id}/timer/stop`, headers), String(id));
-
     expect((await start(crossSite)).status).toBe(403);
-    await ctx.service.startTimer(id, { description: "Сверка накладных" });
+    const entry = await ctx.service.startTimer(id, { description: "Сверка накладных" });
+    const stop = (headers: Record<string, string>) =>
+      api().stopEntry(post(`/api/time-entries/${entry.id}/stop`, headers), String(entry.id));
+
     expect((await stop(crossSite)).status).toBe(403);
     expect((await stop({})).status).toBe(415);
 

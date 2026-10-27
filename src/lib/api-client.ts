@@ -57,7 +57,8 @@ export const apiClient = {
   startTimer: (employeeId: number, description: string) =>
     post<TimeEntry>(`/api/employees/${employeeId}/timer/start`, { description }),
 
-  stopTimer: (employeeId: number) => post<TimeEntry>(`/api/employees/${employeeId}/timer/stop`),
+  /** Stops this very entry: a repeated or late request cannot stop a newer timer. */
+  stopEntry: (entryId: number) => post<TimeEntry>(`/api/time-entries/${entryId}/stop`),
 
   getReport: ({ from, to, employeeId }: { from: string; to: string; employeeId?: number }) => {
     const query = new URLSearchParams({ from, to });
