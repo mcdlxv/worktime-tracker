@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui";
 import { apiClient, describeError } from "@/lib/api-client";
 import type { EmployeeWithTimer } from "@/server/tracking/types";
 import { AddEmployeeForm } from "./add-employee-form";
@@ -48,9 +49,14 @@ export function EmployeesBoard() {
 
       {state.status === "loading" && <p className="text-sm text-muted">Загрузка…</p>}
       {state.status === "failed" && (
-        <p role="alert" className="text-sm text-alert">
-          {state.message}
-        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <p role="alert" className="text-sm text-alert">
+            {state.message}
+          </p>
+          <Button variant="secondary" onClick={() => void reload()}>
+            Повторить
+          </Button>
+        </div>
       )}
       {state.status === "ready" &&
         (state.employees.length === 0 ? (

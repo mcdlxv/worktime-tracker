@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui";
 import { useIsClient } from "@/components/use-is-client";
 import { apiClient, describeError } from "@/lib/api-client";
 import { dayRangeToPeriod, presetRange } from "@/lib/period";
@@ -44,27 +45,30 @@ function ReportScreen() {
   const [employeeId, setEmployeeId] = useState<number | undefined>(undefined);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [result, setResult] = useState<{ key: string; report?: Report; error?: string }>();
+  // Bumped by "Повторить": a new key, so the old error gives way to "Считаю…" at once.
+  const [attempt, setAttempt] = useState(0);
 
   const query = useMemo(() => buildQuery(range, employeeId), [range, employeeId]);
+  const requestKey = query.valid ? `${query.key}#${attempt}` : null;
 
   useEffect(() => {
     apiClient.listEmployees().then(setEmployees, () => setEmployees([]));
   }, []);
 
   useEffect(() => {
-    if (!query.valid) return;
+    if (!query.valid || requestKey === null) return;
     // Switching presets quickly can let an older, slower answer arrive last; it is ignored.
     let isLatest = true;
     apiClient.getReport(query).then(
-      (report) => isLatest && setResult({ key: query.key, report }),
-      (error) => isLatest && setResult({ key: query.key, error: describeError(error) }),
+      (report) => isLatest && setResult({ key: requestKey, report }),
+      (error) => isLatest && setResult({ key: requestKey, error: describeError(error) }),
     );
     return () => {
       isLatest = false;
     };
-  }, [query]);
+  }, [query, requestKey]);
 
-  const current = query.valid && result?.key === query.key ? result : undefined;
+  const current = result?.key === requestKey ? result : undefined;
 
   return (
     <div className="space-y-8">
@@ -82,9 +86,14 @@ function ReportScreen() {
       ) : !current ? (
         <p className="text-sm text-muted">Считаю…</p>
       ) : current.error ? (
-        <p role="alert" className="text-sm text-alert">
-          {current.error}
-        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <p role="alert" className="text-sm text-alert">
+            {current.error}
+          </p>
+          <Button variant="secondary" onClick={() => setAttempt((count) => count + 1)}>
+            Повторить
+          </Button>
+        </div>
       ) : (
         current.report && <ReportTable report={current.report} />
       )}
