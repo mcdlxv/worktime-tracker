@@ -31,6 +31,9 @@ const reportQuerySchema = z.object({
  * - The body must be declared as JSON: 415. Another site cannot send that content type
  *   without a CORS preflight, which this API never grants, whereas a text/plain post needs
  *   none, and request.json() would parse its body all the same.
+ * Not covered: DNS rebinding, where the attacker's own domain is re-pointed at this server,
+ * so the browser treats its requests as same-origin. Only checking the Host header against
+ * an allowlist stops that; see the security notes in the README.
  */
 function assertSameSiteJson(request: Request) {
   const site = request.headers.get("sec-fetch-site");
