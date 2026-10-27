@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lt, or } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import type { Database } from "@/server/db/client";
 import { employees, timeEntries } from "@/server/db/schema";
 import { ConflictError, NotFoundError } from "./errors";
@@ -87,9 +87,12 @@ export function createTrackingService({
     async stopEntry(entryId) {
       // One statement closes the entry only while it still runs: no gap between "is it
       // running?" and "stop it", and a late repeat of the request finds nothing to stop.
+      // max() keeps ended_at >= started_at when this server's clock is behind the one that
+      // started the timer (a clock step back, or two hosts): the entry gets zero length
+      // instead of the CHECK constraint failing.
       const [stopped] = await db
         .update(timeEntries)
-        .set({ endedAt: clock() })
+        .set({ endedAt: sql`max(${clock()}, ${timeEntries.startedAt})` })
         .where(and(eq(timeEntries.id, entryId), isNull(timeEntries.endedAt)))
         .returning();
       if (stopped) return stopped;

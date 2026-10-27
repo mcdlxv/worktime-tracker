@@ -77,6 +77,17 @@ describe("timer: start and stop", () => {
     expect(listed.runningEntry).toEqual(second);
   });
 
+  it("still stops when the server clock has stepped back behind the start", async () => {
+    // A clock step back, or start and stop served by hosts whose clocks differ slightly.
+    const employee = await addEmployee();
+    const entry = await ctx.service.startTimer(employee.id, { description: "Сверка накладных" });
+    ctx.clock.set(T0 - 1_000);
+
+    const stopped = await ctx.service.stopEntry(entry.id);
+
+    expect(stopped.endedAt).toBe(entry.startedAt);
+  });
+
   it("refuses to stop an entry that does not exist", async () => {
     await expect(ctx.service.stopEntry(999)).rejects.toMatchObject({
       code: "ENTRY_NOT_FOUND",
