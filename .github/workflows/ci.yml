@@ -24,9 +24,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Fails on a high or critical advisory in what the app runs on. Development tools are
-      # left out: drizzle-kit pulls in an esbuild with a moderate advisory and has no fix.
-      - run: npm audit --omit=dev --audit-level=high
+      # Fails on a high or critical advisory in anything npm ci installed: development tools
+      # run in CI too. The moderate esbuild advisory that drizzle-kit brings, with no fix
+      # short of a downgrade, stays below the threshold.
+      - run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
