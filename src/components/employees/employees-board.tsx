@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui";
 import { apiClient, describeError } from "@/lib/api-client";
+import { createLatestGate } from "@/lib/latest-gate";
 import type { EmployeeWithTimer } from "@/server/tracking/types";
 import { AddEmployeeForm } from "./add-employee-form";
 import { EmployeeRow } from "./employee-row";
@@ -14,17 +15,22 @@ type BoardState =
 
 export function EmployeesBoard() {
   const [state, setState] = useState<BoardState>({ status: "loading" });
+  const [gate] = useState(createLatestGate);
 
   // State is set only in the promise callbacks, once the answer arrives: setting it
-  // synchronously inside the effect below would cost an extra render pass.
-  const reload = useCallback(
-    () =>
-      apiClient.listEmployees().then(
-        (employees) => setState({ status: "ready", employees }),
-        (error) => setState({ status: "failed", message: describeError(error) }),
-      ),
-    [],
-  );
+  // synchronously inside the effect below would cost an extra render pass. A reload on focus
+  // and one after a button press can overlap; an answer that is no longer the newest is dropped.
+  const reload = useCallback(() => {
+    const isNewest = gate.begin();
+    return apiClient.listEmployees().then(
+      (employees) => {
+        if (isNewest()) setState({ status: "ready", employees });
+      },
+      (error) => {
+        if (isNewest()) setState({ status: "failed", message: describeError(error) });
+      },
+    );
+  }, [gate]);
 
   useEffect(() => {
     void reload();
