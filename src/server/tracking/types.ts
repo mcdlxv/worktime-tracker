@@ -23,6 +23,33 @@ export interface EmployeeWithTimer extends Employee {
   runningEntry: TimeEntry | null;
 }
 
+/** A half-open interval [from, to). */
+export interface Period {
+  from: number;
+  to: number;
+}
+
+export interface ReportEntry extends TimeEntry {
+  /** Only the part of the entry that falls inside the period. */
+  durationMs: number;
+  isRunning: boolean;
+}
+
+export interface EmployeeReport {
+  employee: Employee;
+  /** In time order. */
+  entries: ReportEntry[];
+  totalMs: number;
+}
+
+export interface Report {
+  period: Period;
+  /** The "now" that running entries were counted up to. */
+  generatedAt: number;
+  employees: EmployeeReport[];
+  totalMs: number;
+}
+
 export interface TrackingService {
   addEmployee(input: { name: string }): Promise<Employee>;
   /** Sorted by name using Russian collation. */
