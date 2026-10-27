@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { formatClock, formatDate, formatDuration, formatTime } from "@/lib/format";
+import {
+  formatClock,
+  formatDate,
+  formatDuration,
+  formatEntryTimes,
+  formatTime,
+} from "@/lib/format";
 import { inTimeZone } from "../helpers/time-zone";
+
+describe("formatEntryTimes", () => {
+  // Berlin is UTC+1 in late October 2026; local times below are Berlin times.
+  const berlin = (day: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 9, day, hours - 1, minutes);
+
+  it.each([
+    ["within one day", berlin(26, 9), berlin(26, 11, 30), "09:00–11:30"],
+    ["still running", berlin(26, 9), null, "09:00–…"],
+    ["past midnight, with the end date", berlin(26, 22), berlin(27, 2), "22:00 – 27 октября 02:00"],
+  ])("shows an entry %s", (_, startedAt, endedAt, text) => {
+    inTimeZone("Europe/Berlin", () => {
+      expect(formatEntryTimes(startedAt, endedAt)).toBe(text);
+    });
+  });
+});
 
 describe("formatDate and formatTime", () => {
   it("show a moment in the browser's time zone", () => {

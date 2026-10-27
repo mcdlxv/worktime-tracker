@@ -1,4 +1,4 @@
-import { formatDate, formatDuration, formatTime } from "@/lib/format";
+import { formatDate, formatDuration, formatEntryTimes } from "@/lib/format";
 import type { EmployeeReport, Report, ReportEntry } from "@/server/tracking/types";
 
 const ROW = "grid grid-cols-[1fr_auto_7rem] items-baseline gap-4 py-3 pr-1";
@@ -8,10 +8,14 @@ function EntryLine({ entry }: { entry: ReportEntry }) {
   return (
     <li className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5 py-1.5">
       <span className="w-24 text-muted">{formatDate(entry.startedAt)}</span>
-      <span className="w-28 tabular-nums text-muted">
-        {formatTime(entry.startedAt)}–{entry.endedAt === null ? "…" : formatTime(entry.endedAt)}
+      <span className="min-w-28 tabular-nums text-muted">
+        {formatEntryTimes(entry.startedAt, entry.endedAt)}
       </span>
-      <span className="ml-auto tabular-nums sm:order-last">{formatDuration(entry.durationMs)}</span>
+      <span className="ml-auto tabular-nums sm:order-last">
+        {formatDuration(entry.durationMs)}
+        {/* Without this, "22:00 – 27 октября 02:00 · 2 ч" in a one-day report looks wrong. */}
+        {entry.isClipped && <span className="text-muted"> в периоде</span>}
+      </span>
       <span className="min-w-0 basis-full sm:basis-0 sm:flex-1">
         {entry.description}
         {entry.isRunning && <span className="ml-2 text-lamp">идёт</span>}

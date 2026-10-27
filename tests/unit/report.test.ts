@@ -102,8 +102,39 @@ describe("buildReport", () => {
     expect(alia.entries.map((e) => e.id)).toEqual([early.id, late.id]);
     expect(alia.entries.map((e) => e.durationMs)).toEqual([30 * MINUTE, 1 * HOUR]);
     expect(alia.totalMs).toBe(1.5 * HOUR);
-    expect(boris.entries).toEqual([{ ...running, durationMs: 30 * MINUTE, isRunning: true }]);
+    expect(boris.entries).toEqual([
+      { ...running, durationMs: 30 * MINUTE, isRunning: true, isClipped: false },
+    ]);
     expect(boris.totalMs).toBe(30 * MINUTE);
     expect(report.totalMs).toBe(2 * HOUR);
+  });
+
+  it("marks the entries that stick out of the period, whose duration is only a part", () => {
+    const startsBefore = entry(at(8), at(11));
+    const inside = entry(at(12), at(13));
+    const endsAfter = entry(at(17), at(20));
+
+    const report = buildReport({
+      employees: [employee(1, "Алия Тестова")],
+      entries: [startsBefore, inside, endsAfter],
+      period: PERIOD,
+      now: at(23),
+    });
+
+    expect(report.employees[0].entries.map((e) => e.isClipped)).toEqual([true, false, true]);
+  });
+
+  it("marks a running entry only once now has passed the end of the period", () => {
+    const running = entry(at(16), null);
+    const isClippedAt = (now: number) =>
+      buildReport({
+        employees: [employee(1, "Алия Тестова")],
+        entries: [running],
+        period: PERIOD,
+        now,
+      }).employees[0].entries[0].isClipped;
+
+    expect(isClippedAt(at(17, 30))).toBe(false);
+    expect(isClippedAt(at(21))).toBe(true);
   });
 });

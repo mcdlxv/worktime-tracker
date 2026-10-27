@@ -43,6 +43,7 @@ export function buildReport({
       ...entry,
       durationMs: overlapMs(entry, period, now),
       isRunning: entry.endedAt === null,
+      isClipped: entry.startedAt < period.from || endOf(entry, now) > period.to,
     };
     entriesByEmployee.set(entry.employeeId, [
       ...(entriesByEmployee.get(entry.employeeId) ?? []),

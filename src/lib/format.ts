@@ -25,6 +25,18 @@ export function formatTime(ms: number): string {
 }
 
 /**
+ * "09:00–11:30"; "09:00–…" while running; "22:00 – 27 октября 02:00" when the entry ends on
+ * another day, so a night shift does not read as a few hours on its first day.
+ */
+export function formatEntryTimes(startedAt: number, endedAt: number | null): string {
+  if (endedAt === null) return `${formatTime(startedAt)}–…`;
+  if (formatDate(endedAt) === formatDate(startedAt)) {
+    return `${formatTime(startedAt)}–${formatTime(endedAt)}`;
+  }
+  return `${formatTime(startedAt)} – ${formatDate(endedAt)} ${formatTime(endedAt)}`;
+}
+
+/**
  * "01:02:05" for a running timer; hours are not capped at 24. A negative value, which
  * appears when the browser clock lags behind the server's, is shown as zero.
  */

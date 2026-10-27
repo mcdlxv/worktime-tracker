@@ -33,6 +33,8 @@ export interface ReportEntry extends TimeEntry {
   /** Only the part of the entry that falls inside the period. */
   durationMs: number;
   isRunning: boolean;
+  /** The entry sticks out of the period, so durationMs is less than its full length. */
+  isClipped: boolean;
 }
 
 export interface EmployeeReport {
