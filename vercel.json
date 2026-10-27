@@ -1,0 +1,5 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run db:migrate && TZ=Europe/Moscow npm run db:seed && npm run build",
+  "regions": ["dub1"]
+}
