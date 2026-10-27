@@ -1,7 +1,9 @@
 import { type Database, openDatabase } from "@/server/db/client";
 import { databaseConfig } from "@/server/db/config";
+import { DEMO_TIME_ZONE } from "@/server/db/seed";
 import { createTrackingService } from "@/server/tracking/service";
 import type { TrackingService } from "@/server/tracking/types";
+import { createDemoReset } from "./demo-reset";
 import { createApiHandlers } from "./handlers";
 
 // The database client is opened once per process and kept on globalThis: hot reloading in
@@ -12,14 +14,24 @@ const globalWithDatabase = globalThis as typeof globalThis & { trackingDatabase?
 
 let service: TrackingService | undefined;
 
-export function getTrackingService(): TrackingService {
+export function getDatabase(): Database {
   if (!globalWithDatabase.trackingDatabase) {
     const { url, authToken } = databaseConfig();
     globalWithDatabase.trackingDatabase = openDatabase(url, authToken).db;
   }
-  service ??= createTrackingService({ db: globalWithDatabase.trackingDatabase });
+  return globalWithDatabase.trackingDatabase;
+}
+
+export function getTrackingService(): TrackingService {
+  service ??= createTrackingService({ db: getDatabase() });
   return service;
 }
 
 /** What the route files call. */
 export const api = createApiHandlers(getTrackingService);
+
+export const demoReset = createDemoReset({
+  getDatabase,
+  secret: () => process.env.CRON_SECRET,
+  timeZone: DEMO_TIME_ZONE,
+});
