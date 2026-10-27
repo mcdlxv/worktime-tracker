@@ -14,8 +14,8 @@ const byName = (a: { name: string }, b: { name: string }) =>
  * Did an insert hit the one_running_timer_per_employee index? SQLite names the column,
  * not the index ("UNIQUE constraint failed: time_entries.employee_id"), and that index is
  * the only unique rule on the column. Drizzle wraps the driver error, so the message is
- * looked for along the cause chain. Turso runs SQLite too, so it should report the same
- * text; that is yet to be checked on the demo database.
+ * looked for along the cause chain. Turso reports the same text: on the demo database a
+ * repeated start answers 409, not 500.
  */
 function isRunningTimerConflict(error: unknown): boolean {
   for (let current: unknown = error; current instanceof Error; current = current.cause) {
