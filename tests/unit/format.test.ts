@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { formatClock, formatDuration } from "@/lib/format";
+import { formatClock, formatDate, formatDuration, formatTime } from "@/lib/format";
+import { inTimeZone } from "../helpers/time-zone";
+
+describe("formatDate and formatTime", () => {
+  it("show a moment in the browser's time zone", () => {
+    // Europe/Berlin rather than this machine's UTC+5, so a formatter that froze the
+    // zone it was created in would fail here.
+    inTimeZone("Europe/Berlin", () => {
+      const moment = Date.UTC(2026, 9, 27, 23, 5); // 00:05 on 28 October in Berlin (UTC+1)
+
+      expect(formatDate(moment)).toBe("28 октября");
+      expect(formatTime(moment)).toBe("00:05");
+    });
+  });
+});
 
 describe("formatDuration", () => {
   it.each([

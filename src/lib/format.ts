@@ -10,6 +10,20 @@ export function formatDuration(ms: number): string {
   return hours > 0 ? `${hours} ч ${twoDigits(minutes)} мин` : `${minutes} мин`;
 }
 
+// Dates and times are shown in the browser's time zone. The formatter options are applied
+// per call rather than kept in a module-level Intl.DateTimeFormat, which would freeze the
+// time zone of the moment the module was loaded.
+
+/** "28 октября" */
+export function formatDate(ms: number): string {
+  return new Date(ms).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
+
+/** "09:05" */
+export function formatTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+}
+
 /**
  * "01:02:05" for a running timer; hours are not capped at 24. A negative value, which
  * appears when the browser clock lags behind the server's, is shown as zero.

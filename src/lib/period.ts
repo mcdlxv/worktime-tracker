@@ -15,6 +15,30 @@ function localMidnight(value: string): Date {
   throw new RangeError("Некорректная дата");
 }
 
+const twoDigits = (value: number) => String(value).padStart(2, "0");
+
+/** The local calendar date as "YYYY-MM-DD"; toISOString() would give the UTC date. */
+export function toLocalDateString(date: Date): string {
+  return `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())}`;
+}
+
+export type PeriodPreset = "today" | "week" | "month";
+
+/** From the start of the day, the week (Monday) or the month up to today, inclusive. */
+export function presetRange(
+  preset: PeriodPreset,
+  today: Date = new Date(),
+): { fromDate: string; toDate: string } {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (preset === "week") {
+    const daysSinceMonday = (start.getDay() + 6) % 7; // getDay(): 0 is Sunday
+    start.setDate(start.getDate() - daysSinceMonday);
+  } else if (preset === "month") {
+    start.setDate(1);
+  }
+  return { fromDate: toLocalDateString(start), toDate: toLocalDateString(today) };
+}
+
 /**
  * Turns the dates picked in the form, both inclusive, into the half-open period
  * [from, to) in the browser's time zone: from is local midnight of the first day,

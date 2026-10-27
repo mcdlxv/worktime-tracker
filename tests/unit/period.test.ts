@@ -1,21 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { dayRangeToPeriod } from "@/lib/period";
+import { dayRangeToPeriod, presetRange, toLocalDateString } from "@/lib/period";
 import { HOUR } from "../helpers/test-context";
+import { inTimeZone } from "../helpers/time-zone";
 
-/**
- * Runs the check in a given time zone. CI runs in UTC, where local and UTC midnight
- * coincide, so a `new Date("2026-10-01")` (parsed as UTC) bug would go unnoticed there.
- */
-function inTimeZone(zone: string, check: () => void) {
-  const previous = process.env.TZ;
-  process.env.TZ = zone;
-  try {
-    check();
-  } finally {
-    if (previous === undefined) delete process.env.TZ;
-    else process.env.TZ = previous;
-  }
-}
+describe("presetRange", () => {
+  // Wednesday, 28 October 2026, in local time.
+  const wednesday = new Date(2026, 9, 28, 15, 30);
+
+  it.each([
+    ["today", "2026-10-28", "2026-10-28"],
+    ["week", "2026-10-26", "2026-10-28"],
+    ["month", "2026-10-01", "2026-10-28"],
+  ] as const)("%s runs from %s to today", (preset, fromDate, toDate) => {
+    expect(presetRange(preset, wednesday)).toEqual({ fromDate, toDate });
+  });
+
+  it("starts the week on Monday, also on a Sunday that opens a month", () => {
+    expect(presetRange("week", new Date(2026, 10, 1, 12))).toEqual({
+      fromDate: "2026-10-26",
+      toDate: "2026-11-01",
+    });
+  });
+});
+
+describe("toLocalDateString", () => {
+  it("gives the local calendar date, not the UTC one", () => {
+    inTimeZone("Asia/Tashkent", () => {
+      // 02:00 on 1 November in UTC+5 is still 31 October in UTC.
+      expect(toLocalDateString(new Date(2026, 10, 1, 2, 0))).toBe("2026-11-01");
+    });
+  });
+});
 
 describe("dayRangeToPeriod", () => {
   it("covers whole local days, the last one included", () => {
