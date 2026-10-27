@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayRangeToPeriod, presetRange, toLocalDateString } from "@/lib/period";
+import { dayRangeToPeriod, lastDaysRange, presetRange, toLocalDateString } from "@/lib/period";
 import { HOUR } from "../helpers/test-context";
 import { inTimeZone } from "../helpers/time-zone";
 
@@ -19,6 +19,16 @@ describe("presetRange", () => {
     expect(presetRange("week", new Date(2026, 10, 1, 12))).toEqual({
       fromDate: "2026-10-26",
       toDate: "2026-11-01",
+    });
+  });
+});
+
+describe("lastDaysRange", () => {
+  it("covers the last seven days with today, also across a month end", () => {
+    // Monday, 2 November 2026: "this week" is a single day, the last seven days are not.
+    expect(lastDaysRange(7, new Date(2026, 10, 2, 9, 30))).toEqual({
+      fromDate: "2026-10-27",
+      toDate: "2026-11-02",
     });
   });
 });

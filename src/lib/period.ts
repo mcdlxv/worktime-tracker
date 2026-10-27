@@ -40,6 +40,18 @@ export function presetRange(
 }
 
 /**
+ * The last `days` days up to today, inclusive. The report opens on the last seven days
+ * rather than "this week", which on a Monday morning is a single empty day.
+ */
+export function lastDaysRange(
+  days: number,
+  today: Date = new Date(),
+): { fromDate: string; toDate: string } {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
+  return { fromDate: toLocalDateString(start), toDate: toLocalDateString(today) };
+}
+
+/**
  * Turns the dates picked in the form, both inclusive, into the half-open period
  * [from, to) in the browser's time zone: from is local midnight of the first day,
  * to is local midnight after the last one. The next day is found by calendar

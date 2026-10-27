@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui";
 import { useIsClient } from "@/components/use-is-client";
 import { apiClient, describeError } from "@/lib/api-client";
-import { dayRangeToPeriod, presetRange } from "@/lib/period";
+import { dayRangeToPeriod, lastDaysRange } from "@/lib/period";
 import type { Employee, Report } from "@/server/tracking/types";
 import { type DateRange, PeriodPicker } from "./period-picker";
 import { ReportTable } from "./report-table";
@@ -22,7 +22,7 @@ function buildQuery(range: DateRange, employeeId: number | undefined): Query {
   }
 }
 
-/** The report screen; it starts from "this week", so it needs the browser's own date. */
+/** The report screen; it starts from the last seven days, so it needs the browser's own date. */
 export function ReportBoard() {
   const isClient = useIsClient();
   return (
@@ -41,7 +41,7 @@ export function ReportBoard() {
 }
 
 function ReportScreen() {
-  const [range, setRange] = useState<DateRange>(() => presetRange("week"));
+  const [range, setRange] = useState<DateRange>(() => lastDaysRange(7));
   const [employeeId, setEmployeeId] = useState<number | undefined>(undefined);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [result, setResult] = useState<{ key: string; report?: Report; error?: string }>();
