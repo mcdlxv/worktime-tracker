@@ -29,3 +29,10 @@ jobs:
       - run: npm test
       - run: npm run format:check
       - run: npm run build
+      # Playwright drives the Google Chrome that the Ubuntu runner image already has.
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
