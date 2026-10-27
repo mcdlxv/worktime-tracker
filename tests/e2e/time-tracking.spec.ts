@@ -30,6 +30,43 @@ test("adding an employee, timing a task and finding it in today's report", async
   await expect(employeeReport.getByText("Сквозная проверка")).toBeVisible();
 });
 
+test("the keyboard focus stays in the row after starting and stopping", async ({ page }) => {
+  const name = uniqueName("Клавиатурный Тест");
+  const row = await addEmployee(page, name);
+  const task = row.getByLabel(`Задача для сотрудника ${name}`);
+
+  // Starting replaces the task field with the stop button, and stopping brings it back.
+  await task.fill("Проверка фокуса");
+  await task.press("Enter");
+  await expect(row.getByRole("button", { name: "Остановить" })).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(task).toBeFocused();
+});
+
+test("a slow start does not pull the focus back once the user has moved on", async ({ page }) => {
+  const name = uniqueName("Клавиатурный Тест");
+  const row = await addEmployee(page, name);
+
+  // Hold the start, and meanwhile go on to the field for a new employee.
+  const held: Array<() => void> = [];
+  await page.route(/\/timer\/start$/, async (route) => {
+    await new Promise<void>((resolve) => held.push(resolve));
+    await route.continue();
+  });
+  await row.getByLabel(`Задача для сотрудника ${name}`).fill("Проверка фокуса");
+  await row.getByLabel(`Задача для сотрудника ${name}`).press("Enter");
+  await expect.poll(() => held.length).toBe(1);
+  const newEmployee = page.getByLabel("Новый сотрудник");
+  await newEmployee.focus();
+  held.forEach((release) => release());
+
+  const stop = row.getByRole("button", { name: "Остановить" });
+  await expect(stop).toBeVisible();
+  await expect(newEmployee).toBeFocused();
+  await stop.click();
+});
+
 // Running timers are counted up to the moment of the answer, so a report left open goes stale.
 test("the report says when it was counted", async ({ page }) => {
   await addEmployee(page, uniqueName("Отчётный Тест"));

@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button, TextInput } from "@/components/ui";
 import { apiClient, describeError } from "@/lib/api-client";
 import { formatTime } from "@/lib/format";
@@ -13,15 +13,32 @@ export function EmployeeRow({
   onChange: () => Promise<void>;
 }) {
   const running = employee.runningEntry;
+  const runningId = running?.id ?? null;
   const [task, setTask] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const taskInput = useRef<HTMLInputElement>(null);
+  const stopButton = useRef<HTMLButtonElement>(null);
+  // Set by a start or stop in this row, so that a reload alone never moves the focus.
+  const returnFocus = useRef(false);
+
+  useEffect(() => {
+    // Starting replaces the task field with the stop button and stopping brings it back,
+    // and a pressed button is disabled during the request: either way the focus falls to
+    // the page itself. Once the row has settled, it goes to the control for the next step,
+    // unless the user has put it somewhere else meanwhile.
+    if (busy || !returnFocus.current) return;
+    returnFocus.current = false;
+    if (document.activeElement !== document.body) return;
+    (runningId === null ? taskInput : stopButton).current?.focus();
+  }, [busy, runningId]);
 
   /**
    * Sends one request, then reloads the list whatever the outcome: after a 409 because the
    * timer was started in another tab, the row should show what is really going on.
    */
   async function perform(action: () => Promise<unknown>) {
+    returnFocus.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -64,6 +81,7 @@ export function EmployeeRow({
             </div>
             <LiveClock startedAt={running.startedAt} />
             <Button
+              ref={stopButton}
               variant="stop"
               disabled={busy}
               onClick={() => void perform(() => apiClient.stopEntry(running.id))}
@@ -77,6 +95,7 @@ export function EmployeeRow({
               Задача для сотрудника {employee.name}
             </label>
             <TextInput
+              ref={taskInput}
               id={taskInputId}
               value={task}
               onChange={(event) => {
