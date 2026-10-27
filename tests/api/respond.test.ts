@@ -1,4 +1,5 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { HttpError } from "@/server/http/errors";
 import { errorResponse } from "@/server/http/respond";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/tracking/errors";
 
@@ -25,6 +26,15 @@ describe("errorResponse", () => {
     expect(await read(errorResponse(error))).toEqual({
       status,
       body: { error: { code: error.code, message: error.message } },
+    });
+  });
+
+  it("answers an error of the HTTP request itself with that error's status", async () => {
+    const error = new HttpError(403, "CROSS_SITE_REQUEST", "Запрос с другого сайта отклонён");
+
+    expect(await read(errorResponse(error))).toEqual({
+      status: 403,
+      body: { error: { code: "CROSS_SITE_REQUEST", message: "Запрос с другого сайта отклонён" } },
     });
   });
 

@@ -112,8 +112,9 @@ describe("HTTP handlers", () => {
 
   it("POST /api/employees/:id/timer/stop: 409 while idle, 200 with endedAt after a start", async () => {
     const id = await addEmployee();
+    const stop = () => api().stopTimer(post(`/api/employees/${id}/timer/stop`, {}), String(id));
 
-    expect(await read(await api().stopTimer(String(id)))).toEqual({
+    expect(await read(await stop())).toEqual({
       status: 409,
       body: { error: { code: "TIMER_NOT_RUNNING", message: "Таймер не запущен" } },
     });
@@ -121,7 +122,7 @@ describe("HTTP handlers", () => {
     await ctx.service.startTimer(id, { description: "Сверка накладных" });
     ctx.clock.advance(30 * MINUTE);
 
-    expect(await read(await api().stopTimer(String(id)))).toMatchObject({
+    expect(await read(await stop())).toMatchObject({
       status: 200,
       body: { startedAt: T0, endedAt: T0 + 30 * MINUTE },
     });

@@ -1,4 +1,5 @@
 import { DomainError, type ErrorCode } from "@/server/tracking/errors";
+import { HttpError } from "./errors";
 
 // A Record, so a new error code without a status does not compile.
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
@@ -15,6 +16,12 @@ export function errorResponse(error: unknown): Response {
     return Response.json(
       { error: { code: error.code, message: error.message } },
       { status: STATUS_BY_CODE[error.code] },
+    );
+  }
+  if (error instanceof HttpError) {
+    return Response.json(
+      { error: { code: error.code, message: error.message } },
+      { status: error.status },
     );
   }
   // Anything unexpected stays on the server: such messages can carry SQL and user data.

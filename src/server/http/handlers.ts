@@ -2,6 +2,7 @@ import { z } from "zod";
 import { NotFoundError, ValidationError } from "@/server/tracking/errors";
 import type { TrackingService } from "@/server/tracking/types";
 import { parseInput } from "@/server/tracking/validation";
+import { HttpError } from "./errors";
 import { errorResponse } from "./respond";
 
 /** An ISO 8601 instant with an explicit offset ("…Z" or "…+05:00"), as unix milliseconds. */
@@ -19,6 +20,32 @@ const reportQuerySchema = z.object({
     .positive("Некорректный сотрудник")
     .optional(),
 });
+
+/**
+ * Requests that change data are accepted only as JSON from the app's own pages. There is no
+ * login (the assignment rules it out), so this is not about sessions: it keeps a page on
+ * another site from making a visitor's browser write to an app on localhost or an intranet.
+ * - A browser marks such a request with Sec-Fetch-Site: cross-site (or same-site, for a
+ *   neighbouring subdomain): 403. Clients that are not browsers, such as curl, send no
+ *   Sec-Fetch-Site and pass.
+ * - The body must be declared as JSON: 415. Another site cannot send that content type
+ *   without a CORS preflight, which this API never grants, whereas a text/plain post needs
+ *   none, and request.json() would parse its body all the same.
+ */
+function assertSameSiteJson(request: Request) {
+  const site = request.headers.get("sec-fetch-site");
+  if (site !== null && site !== "same-origin" && site !== "none") {
+    throw new HttpError(403, "CROSS_SITE_REQUEST", "Запрос с другого сайта отклонён");
+  }
+  const mediaType = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  if (mediaType !== "application/json") {
+    throw new HttpError(
+      415,
+      "UNSUPPORTED_MEDIA_TYPE",
+      "Нужен заголовок Content-Type: application/json",
+    );
+  }
+}
 
 /** A body that is not JSON is the client's mistake: 400, not a crash. */
 async function readJson(request: Request): Promise<unknown> {
@@ -64,6 +91,7 @@ export function createApiHandlers(getService: () => TrackingService) {
 
     addEmployee: (request: Request) =>
       respond(async (service) => {
+        assertSameSiteJson(request);
         // The service validates the body at runtime; the cast only tells the compiler so.
         const input = (await readJson(request)) as { name: string };
         return Response.json(await service.addEmployee(input), { status: 201 });
@@ -71,13 +99,17 @@ export function createApiHandlers(getService: () => TrackingService) {
 
     startTimer: (request: Request, rawId: string) =>
       respond(async (service) => {
+        assertSameSiteJson(request);
         const employeeId = parseEmployeeId(rawId);
         const input = (await readJson(request)) as { description: string };
         return Response.json(await service.startTimer(employeeId, input), { status: 201 });
       }),
 
-    stopTimer: (rawId: string) =>
-      respond(async (service) => Response.json(await service.stopTimer(parseEmployeeId(rawId)))),
+    stopTimer: (request: Request, rawId: string) =>
+      respond(async (service) => {
+        assertSameSiteJson(request);
+        return Response.json(await service.stopTimer(parseEmployeeId(rawId)));
+      }),
 
     getReport: (request: Request) =>
       respond(async (service) =>
