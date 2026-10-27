@@ -57,4 +57,6 @@ export interface TrackingService {
   startTimer(employeeId: number, input: { description: string }): Promise<TimeEntry>;
   /** Closes the running entry at the current time and returns it. */
   stopTimer(employeeId: number): Promise<TimeEntry>;
+  /** Totals for every employee (or just one) over the period; running timers count up to now. */
+  getReport(input: { period: Period; employeeId?: number }): Promise<Report>;
 }

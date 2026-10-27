@@ -1,11 +1,14 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or } from "drizzle-orm";
 import type { Database } from "@/server/db/client";
 import { employees, timeEntries } from "@/server/db/schema";
 import { ConflictError, NotFoundError } from "./errors";
+import { buildReport } from "./report";
 import type { Clock, TrackingService } from "./types";
-import { employeeInputSchema, parseInput, startTimerInputSchema } from "./validation";
+import { employeeInputSchema, parseInput, periodSchema, startTimerInputSchema } from "./validation";
 
 const russianCollator = new Intl.Collator("ru");
+const byName = (a: { name: string }, b: { name: string }) =>
+  russianCollator.compare(a.name, b.name);
 
 /**
  * Did an insert hit the one_running_timer_per_employee index? SQLite names the column,
@@ -59,7 +62,7 @@ export function createTrackingService({
           ...employee,
           runningEntry: runningByEmployee.get(employee.id) ?? null,
         }))
-        .sort((a, b) => russianCollator.compare(a.name, b.name));
+        .sort(byName);
     },
 
     async startTimer(employeeId, input) {
@@ -92,6 +95,33 @@ export function createTrackingService({
         .returning();
       if (!entry) throw new ConflictError("TIMER_NOT_RUNNING", "Таймер не запущен");
       return entry;
+    },
+
+    async getReport({ period, employeeId }) {
+      const { from, to } = parseInput(periodSchema, period);
+      if (employeeId !== undefined) await requireEmployee(employeeId);
+      const now = clock();
+
+      const [people, entries] = await Promise.all([
+        db
+          .select()
+          .from(employees)
+          .where(employeeId === undefined ? undefined : eq(employees.id, employeeId)),
+        // A coarse filter the index can serve; report.ts decides exactly what belongs
+        // to the period, including running entries that only count once "now" is past `from`.
+        db
+          .select()
+          .from(timeEntries)
+          .where(
+            and(
+              employeeId === undefined ? undefined : eq(timeEntries.employeeId, employeeId),
+              lt(timeEntries.startedAt, to),
+              or(isNull(timeEntries.endedAt), gt(timeEntries.endedAt, from)),
+            ),
+          ),
+      ]);
+
+      return buildReport({ employees: people.sort(byName), entries, period: { from, to }, now });
     },
   };
 }

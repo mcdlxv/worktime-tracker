@@ -13,6 +13,10 @@ export const startTimerInputSchema = z.object({
     .max(200, "Описание не длиннее 200 символов"),
 });
 
+export const periodSchema = z
+  .object({ from: z.number(), to: z.number() })
+  .refine((period) => period.from < period.to, "Начало периода должно быть раньше конца");
+
 /** Validates input against a schema; the first problem becomes a ValidationError. */
 export function parseInput<T extends z.ZodType>(schema: T, input: unknown): z.output<T> {
   const result = schema.safeParse(input);
