@@ -30,6 +30,13 @@ test("adding an employee, timing a task and finding it in today's report", async
   await expect(employeeReport.getByText("Сквозная проверка")).toBeVisible();
 });
 
+test("pages refuse to be shown inside a frame on another site", async ({ page }) => {
+  const response = await page.goto("/");
+
+  expect(response?.headers()["x-frame-options"]).toBe("DENY");
+  expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+});
+
 test("a running timer with a long task fits a phone screen", async ({ page, isMobile }) => {
   test.skip(!isMobile, "only the phone layout can overflow this way");
   // Guards defect 6 in docs/ai-log.md: the row used to run 107 px past a 375 px screen.
