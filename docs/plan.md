@@ -419,25 +419,34 @@ export interface TrackingService {
 
 ---
 
-## Этап 3 — HTTP API
+## Этап 3 — HTTP API ✅
 
-### Задача 3.1: маппинг ошибок
+Итог: 80 тестов в 12 файлах. Коммиты `1abe9db`, `13315c5`, `23cae87`.
+
+### Задача 3.1: маппинг ошибок ✅
 
 **Файлы:** `tests/api/respond.test.ts`, `src/server/http/respond.ts`.
 
-- [ ] Тесты:
+- [x] Тесты:
   - `ValidationError` → 400;
   - `NotFoundError` → 404;
-  - `ConflictError` → 409;
-  - `new Error("db down")` → 500 с `INTERNAL_ERROR`, причём текст «db down» в ответ **не** попадает.
-- [ ] Коммит `feat(api): map domain errors to HTTP responses`.
+  - оба `ConflictError` → 409;
+  - неожиданная ошибка с SQL и данными пользователя в сообщении (как у `DrizzleQueryError`) → 500 `INTERNAL_ERROR`. Сообщение в ответ **не** попадает и пишется только в серверный лог (`console.error`).
+- [x] Статусы задаёт `Record<ErrorCode, number>`. При добавлении `INVALID_JSON` проверка типов упала, пока коду не дали статус: так и было задумано. Коммит `1abe9db`.
 
-### Задача 3.2: обработчики
+### Задача 3.2: обработчики ✅
 
 **Файлы:** `tests/api/handlers.test.ts`, `src/server/http/handlers.ts`.
 
-- [ ] `createApiHandlers(getService)` → `{ listEmployees, addEmployee(req), startTimer(req, id), stopTimer(id), getReport(req) }`. Тесты передают `() => Promise.resolve(testService)`.
-- [ ] Тесты:
+- [x] `createApiHandlers(getService)` → `{ listEmployees, addEmployee(req), startTimer(req, id), stopTimer(id), getReport(req) }`.
+  - `getService` синхронный: открыть БД — синхронная операция, а асинхронность здесь ничего не дала бы (YAGNI).
+  - Тесты передают `() => ctx.service`.
+- [x] Разбор query для отчёта находится в HTTP-слое: строки из URL переводятся в `Period`.
+  - `from` и `to` — ISO 8601 со смещением. Время без смещения неоднозначно, поэтому отклоняется.
+  - `employeeId` — положительное целое.
+  - Сообщения на русском.
+  - API zod 4 (`z.iso.datetime`, параметр `error`) сначала проверены на живых значениях.
+- [x] Тесты (A6 расширен до `abc`, `0`, `-1`, `1.5`, `999`; A9 — пять случаев, включая время без смещения и нечисловой `employeeId`; плюс сбой внутри сервиса → 500):
   | #   | Запрос                                                       | Ожидание                                  |
   | --- | ------------------------------------------------------------ | ----------------------------------------- |
   | A1  | POST employees `{ name: "Алия" }`                            | 201, `name: "Алия"`                       |
@@ -449,9 +458,9 @@ export interface TrackingService {
   | A7  | POST stop без таймера / после старта                         | 409 `TIMER_NOT_RUNNING` / 200 с `endedAt` |
   | A8  | GET report с валидным периодом / пустым периодом             | 200 с итогами / 200, `totalMs: 0`         |
   | A9  | GET report без `from`, с мусором вместо даты, с `from >= to` | 400                                       |
-- [ ] Коммит `feat(api): HTTP handlers for employees, timer and report`.
+- [x] Коммит `13315c5`.
 
-### Задача 3.3: маршруты и контейнер
+### Задача 3.3: маршруты и контейнер ✅
 
 **Файлы:**
 
@@ -461,13 +470,18 @@ export interface TrackingService {
 - `src/app/api/employees/[id]/timer/stop/route.ts`;
 - `src/app/api/report/route.ts`.
 
-- [ ] `getTrackingService()`:
-  - лениво открывает БД из `DATABASE_URL` / `DATABASE_AUTH_TOKEN`;
-  - кэширует промис в `globalThis`, чтобы HMR в dev не плодил подключения.
-- [ ] Маршруты по 3–5 строк, параметры через `ctx: RouteContext<'/api/employees/[id]/timer/start'>`.
-- [ ] `npm run build`: в выводе API-маршруты помечены `ƒ` (динамические).
-- [ ] Ручная проверка через `curl` по запущенному dev-серверу — примеры пойдут в README.
-- [ ] Коммит `feat(api): wire route handlers`.
+- [x] `getTrackingService()`:
+  - лениво открывает БД из `databaseConfig()`;
+  - держит сервис в `globalThis`, чтобы горячая перезагрузка в dev не открывала новое подключение к БД.
+- [x] Маршруты по 3–5 строк, параметры через `ctx: RouteContext<'/api/employees/[id]/timer/start'>`.
+- [x] `npm run build`: все четыре API-маршрута помечены `ƒ` (динамические), в том числе `GET /api/employees`, который не читает запрос.
+- [x] Живая проверка запущенного dev-сервера:
+  - каждый эндпоинт вернул ожидаемый статус, в том числе 409 на повторный старт;
+  - пустой отчёт за сентябрь отдал нули;
+  - итог за октябрь совпал с разницей между стопом и стартом.
+- [x] **Найдено вживую.** Незакодированный `+` в смещении (`?from=…+05:00`) читается как пробел → 400. Наш клиент отправляет время с `Z` (`toISOString()`), а в README для `curl` нужен `--data-urlencode`.
+- [x] После проверки dev-база удалена, чтобы сид на этапе 4 начинал с чистой БД. Коммит `23cae87`.
+- **На заметку для README:** скрипты (`db:migrate`) читают `.env` через `loadEnvConfig` в режиме production, а `next dev` — в режиме development. Чтобы оба видели одни и те же переменные, Turso-настройки держим в `.env.local`: он загружается в обоих режимах.
 
 ---
 
