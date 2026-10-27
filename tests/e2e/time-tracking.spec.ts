@@ -30,6 +30,35 @@ test("adding an employee, timing a task and finding it in today's report", async
   await expect(employeeReport.getByText("Сквозная проверка")).toBeVisible();
 });
 
+// Running timers are counted up to the moment of the answer, so a report left open goes stale.
+test("the report says when it was counted", async ({ page }) => {
+  await addEmployee(page, uniqueName("Отчётный Тест"));
+  await page.goto("/report");
+
+  await expect(page.getByText(/^Посчитано на \d\d:\d\d$/)).toBeVisible();
+});
+
+test("the report recounts on return to the tab without clearing the screen", async ({ page }) => {
+  await addEmployee(page, uniqueName("Отчётный Тест"));
+  await page.goto("/report");
+  const total = page.getByText("Всего", { exact: true });
+  await expect(total).toBeVisible();
+
+  // Hold the recount: while it is on its way, the report already shown has to stay.
+  const held: Array<() => void> = [];
+  await page.route(/\/api\/report\?/, async (route) => {
+    await new Promise<void>((resolve) => held.push(resolve));
+    await route.continue();
+  });
+  const recount = page.waitForRequest(/\/api\/report\?/);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await recount;
+
+  await expect(page.getByText("Считаю…")).toBeHidden();
+  await expect(total).toBeVisible();
+  held.forEach((release) => release());
+});
+
 test("pages refuse to be shown inside a frame on another site", async ({ page }) => {
   const response = await page.goto("/");
 

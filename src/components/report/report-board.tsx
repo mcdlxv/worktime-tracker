@@ -45,30 +45,42 @@ function ReportScreen() {
   const [employeeId, setEmployeeId] = useState<number | undefined>(undefined);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [result, setResult] = useState<{ key: string; report?: Report; error?: string }>();
-  // Bumped by "Повторить": a new key, so the old error gives way to "Считаю…" at once.
-  const [attempt, setAttempt] = useState(0);
+  // Bumped to ask the same query again: on window focus, and by "Повторить".
+  const [refreshes, setRefreshes] = useState(0);
 
   const query = useMemo(() => buildQuery(range, employeeId), [range, employeeId]);
-  const requestKey = query.valid ? `${query.key}#${attempt}` : null;
 
   useEffect(() => {
     apiClient.listEmployees().then(setEmployees, () => setEmployees([]));
   }, []);
 
   useEffect(() => {
-    if (!query.valid || requestKey === null) return;
+    // Running timers are counted up to the moment of the answer; coming back to the tab
+    // recounts them. The shown report stays in place until the new one arrives.
+    const refresh = () => setRefreshes((count) => count + 1);
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, []);
+
+  useEffect(() => {
+    if (!query.valid) return;
     // Switching presets quickly can let an older, slower answer arrive last; it is ignored.
     let isLatest = true;
     apiClient.getReport(query).then(
-      (report) => isLatest && setResult({ key: requestKey, report }),
-      (error) => isLatest && setResult({ key: requestKey, error: describeError(error) }),
+      (report) => isLatest && setResult({ key: query.key, report }),
+      (error) => isLatest && setResult({ key: query.key, error: describeError(error) }),
     );
     return () => {
       isLatest = false;
     };
-  }, [query, requestKey]);
+  }, [query, refreshes]);
 
-  const current = result?.key === requestKey ? result : undefined;
+  const current = query.valid && result?.key === query.key ? result : undefined;
+
+  function retry() {
+    setResult(undefined); // so "Считаю…" replaces the error at once
+    setRefreshes((count) => count + 1);
+  }
 
   return (
     <div className="space-y-8">
@@ -90,7 +102,7 @@ function ReportScreen() {
           <p role="alert" className="text-sm text-alert">
             {current.error}
           </p>
-          <Button variant="secondary" onClick={() => setAttempt((count) => count + 1)}>
+          <Button variant="secondary" onClick={retry}>
             Повторить
           </Button>
         </div>

@@ -1,4 +1,4 @@
-import { formatDate, formatDuration, formatEntryTimes } from "@/lib/format";
+import { formatDate, formatDuration, formatEntryTimes, formatTime } from "@/lib/format";
 import type { EmployeeReport, Report, ReportEntry } from "@/server/tracking/types";
 
 const ROW = "grid grid-cols-[1fr_auto_7rem] items-baseline gap-4 py-3 pr-1";
@@ -87,6 +87,8 @@ export function ReportTable({ report }: { report: Report }) {
       {report.totalMs === 0 && entryCount === 0 && (
         <p className="mb-4 text-muted">За этот период ничего не записано.</p>
       )}
+      {/* Running timers are counted up to this moment; the report recounts on window focus. */}
+      <p className="mb-2 text-sm text-muted">Посчитано на {formatTime(report.generatedAt)}</p>
       <div className="border-t border-rule">
         <div className={`${ROW} border-b border-rule pl-6 text-sm text-muted`} aria-hidden>
           <span>Сотрудник</span>
