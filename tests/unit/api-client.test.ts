@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiClient } from "@/lib/api-client";
+import { ApiError, apiClient, describeError } from "@/lib/api-client";
 
 /** Replaces fetch with a stub that answers every call with the given status and body. */
 function stubFetch(status: number, body: unknown) {
@@ -75,5 +75,16 @@ describe("apiClient", () => {
       code: "NETWORK_ERROR",
       message: "Нет связи с сервером. Проверьте, что приложение запущено, и попробуйте ещё раз.",
     });
+  });
+});
+
+describe("describeError", () => {
+  it("shows the server's message for an API error and a plain hint for anything else", () => {
+    expect(describeError(new ApiError(409, "TIMER_ALREADY_RUNNING", "Таймер уже запущен"))).toBe(
+      "Таймер уже запущен",
+    );
+    expect(describeError(new TypeError("x is undefined"))).toBe(
+      "Что-то пошло не так. Обновите страницу и попробуйте ещё раз.",
+    );
   });
 });

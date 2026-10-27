@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* A ledger: paper, ink and ruling. One accent, the lamp of a running timer. */
+  --color-paper: #f6f7f4;
+  --color-ink: #1c2330;
+  --color-muted: #5b6472;
+  --color-rule: #d6dbd3;
+  --color-lamp: #b45309;
+  --color-lamp-soft: #fbf1e4;
+  --color-alert: #b42318;
+}
+
+@layer base {
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ink;
+  }
+}

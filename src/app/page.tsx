@@ -1,7 +1,5 @@
-export default function Home() {
-  return (
-    <main>
-      <div>Hello world!</div>
-    </main>
-  );
+import { EmployeesBoard } from "@/components/employees/employees-board";
+
+export default function EmployeesPage() {
+  return <EmployeesBoard />;
 }

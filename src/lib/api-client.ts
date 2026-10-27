@@ -12,6 +12,13 @@ export class ApiError extends Error {
   }
 }
 
+/** The text to show for a failed call. */
+export function describeError(error: unknown): string {
+  return error instanceof ApiError
+    ? error.message
+    : "Что-то пошло не так. Обновите страницу и попробуйте ещё раз.";
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
