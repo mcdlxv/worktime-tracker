@@ -35,6 +35,23 @@ describe("demo data", () => {
     expect(await ctx.db.select().from(timeEntries)).toHaveLength(countBefore);
   });
 
+  it("lays the workday out in the given time zone, whatever the machine's own", async () => {
+    // Wednesday, 28 October 2026, noon in Moscow (UTC+3). Vercel runs functions in UTC, and
+    // this machine and CI run in other zones, so a seed that used local time would not match.
+    const now = Date.UTC(2026, 9, 28, 9, 0);
+
+    await seedDemoData(ctx.db, { now, timeZone: "Europe/Moscow" });
+
+    const entries = await ctx.db.select().from(timeEntries);
+    const earliest = Math.min(...entries.map((entry) => entry.startedAt));
+    // A week back is Wednesday, 21 October; the first entry starts at 09:00 Moscow time.
+    expect(earliest).toBe(Date.UTC(2026, 9, 21, 6, 0));
+    for (const entry of entries) {
+      const weekday = new Date(entry.startedAt + 3 * HOUR).getUTCDay();
+      expect([0, 6]).not.toContain(weekday);
+    }
+  });
+
   it("starts over when asked to reset", async () => {
     await ctx.service.addEmployee({ name: "Посторонний" });
 
