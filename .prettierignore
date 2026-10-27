@@ -1,0 +1,8 @@
+.next
+node_modules
+drizzle
+data
+package-lock.json
+next-env.d.ts
+AGENTS.md
+CLAUDE.md

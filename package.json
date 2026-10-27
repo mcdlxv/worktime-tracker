@@ -2,16 +2,25 @@
   "name": "worktime-tracker",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run typecheck && npm test"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
     "drizzle-orm": "^0.45.4",
-    "next": "^16.3.5",
+    "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "^4.6.7"
@@ -23,7 +32,7 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.5",
+    "eslint-config-next": "16.3.5",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.10",
     "tailwindcss": "^4",
