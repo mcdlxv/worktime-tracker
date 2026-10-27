@@ -1,4 +1,5 @@
-export type ErrorCode = "VALIDATION_ERROR" | "EMPLOYEE_NOT_FOUND" | "TIMER_NOT_RUNNING";
+export type ErrorCode =
+  "VALIDATION_ERROR" | "EMPLOYEE_NOT_FOUND" | "TIMER_ALREADY_RUNNING" | "TIMER_NOT_RUNNING";
 
 /** An expected failure with a stable code that the HTTP layer maps to a status. */
 export class DomainError extends Error {
@@ -24,7 +25,7 @@ export class NotFoundError extends DomainError {
 }
 
 export class ConflictError extends DomainError {
-  constructor(code: "TIMER_NOT_RUNNING", message: string) {
+  constructor(code: "TIMER_ALREADY_RUNNING" | "TIMER_NOT_RUNNING", message: string) {
     super(code, message);
   }
 }

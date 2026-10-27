@@ -7,6 +7,21 @@ import { employeeInputSchema, parseInput, startTimerInputSchema } from "./valida
 
 const russianCollator = new Intl.Collator("ru");
 
+/**
+ * Did an insert hit the one_running_timer_per_employee index? SQLite names the column,
+ * not the index ("UNIQUE constraint failed: time_entries.employee_id"), and that index is
+ * the only unique rule on the column. Drizzle wraps the driver error, so the message is
+ * looked for along the cause chain; the text is the same locally and on Turso.
+ */
+function isRunningTimerConflict(error: unknown): boolean {
+  for (let current: unknown = error; current instanceof Error; current = current.cause) {
+    if (current.message.includes("UNIQUE constraint failed: time_entries.employee_id")) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function createTrackingService({
   db,
   clock = Date.now,
@@ -50,11 +65,20 @@ export function createTrackingService({
     async startTimer(employeeId, input) {
       const { description } = parseInput(startTimerInputSchema, input);
       await requireEmployee(employeeId);
-      const [entry] = await db
-        .insert(timeEntries)
-        .values({ employeeId, description, startedAt: clock() })
-        .returning();
-      return entry;
+      // No "is a timer already running?" query first: two requests could both pass it.
+      // The unique index decides, and its violation becomes a domain error.
+      try {
+        const [entry] = await db
+          .insert(timeEntries)
+          .values({ employeeId, description, startedAt: clock() })
+          .returning();
+        return entry;
+      } catch (error) {
+        if (isRunningTimerConflict(error)) {
+          throw new ConflictError("TIMER_ALREADY_RUNNING", "Таймер уже запущен");
+        }
+        throw error;
+      }
     },
 
     async stopTimer(employeeId) {
